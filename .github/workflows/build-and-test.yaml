@@ -1,0 +1,21 @@
+﻿name: Build and Test
+
+on: 
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup dotnet ${{ matrix.dotnet-version }}
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: 7.0.x
+      - name: Build
+        run: dotnet build
+        working-directory: advent-of-code-2023
+      - name: Test
+        run: dotnet test -l "console;verbosity=detailed"
+        working-directory: advent-of-code-2023
