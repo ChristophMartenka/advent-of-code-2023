@@ -13,4 +13,9 @@
       <PackageReference Include="NUnit3TestAdapter" Version="4.5.0" />
     </ItemGroup>
 
+    <ItemGroup>
+        <EmbeddedResource Include="day0\input.txt"/>
+        <EmbeddedResource Include="day0\testInput.txt"/>
+    </ItemGroup>
+
 </Project>
