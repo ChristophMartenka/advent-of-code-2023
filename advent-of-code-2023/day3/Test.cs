@@ -6,27 +6,17 @@ namespace advent.of.code.day3;
 [TestFixture]
 internal class Test {
 
-    [Test]
-    public void Task1_TestInput() {
-        var result = Solution.Task1(FileReader.GetFileForDay(3, "testInput.txt"));
-        Assert.AreEqual(result, 4361);
+    private const int Day = 3;
+
+    [TestCase(Day, "testInput.txt", TestName = "Day {0} Part 1 should be successful with test input", ExpectedResult = 4361)]
+    [TestCase(Day, "input.txt", TestName = "Day {0} Part 1 should be successful with real input", ExpectedResult = 535078)]
+    public int Task1_Test(int day, string fileName) {
+        return Solution.Task1(FileReader.GetFileForDay(day, fileName));
     }
 
-    [Test]
-    public void Task1_RealInput() {
-        var result = Solution.Task1(FileReader.GetInputForDay(3));
-        Assert.AreEqual(result, 535078);
-    }
-
-    [Test]
-    public void Task2_TestInput() {
-        var result = Solution.Task2(FileReader.GetFileForDay(3, "testInput.txt"));
-        Assert.AreEqual(result, 467835);
-    }
-
-    [Test]
-    public void Task2_RealInput() {
-        var result = Solution.Task2(FileReader.GetInputForDay(3));
-        Assert.AreEqual(result, 75312571);
+    [TestCase(Day, "testInput.txt", TestName = "Day {0} Part 2 should be successful with test input", ExpectedResult = 467835)]
+    [TestCase(Day, "input.txt", TestName = "Day {0} Part 2 should be successful with real input", ExpectedResult = 75312571)]
+    public int Task2_Test(int day, string fileName) {
+        return Solution.Task2(FileReader.GetFileForDay(day, fileName));
     }
 }
