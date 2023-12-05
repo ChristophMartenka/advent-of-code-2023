@@ -11,7 +11,6 @@ internal static class Solution {
 
             if (val < min) {
                 min = val;
-                Console.Error.WriteLine(min);
             }
         }
 
@@ -30,33 +29,32 @@ internal static class Solution {
         var approx = new SortedDictionary<long, Range>();
         var min = long.MaxValue;
         foreach (var seed in seeds) {
-            Console.Error.WriteLine("approx " + seed);
+            Console.Out.WriteLine("approx " + seed);
 
             seed.ApproxValues(500).AsParallel()
                 .Select(s => dictionaries.Aggregate(s, (current, dictionary) => Find(dictionary, current)))
                 .ForAll(s => {
                     if (s < min) {
                         min = s;
-                        Console.Error.WriteLine(min);
+                        Console.Out.WriteLine(min);
                         approx.TryAdd(s, seed);
                     }
                 });
-
-            Console.Error.WriteLine("------------------------------------------------");
         }
 
-        Console.Error.WriteLine(approx.First().Value);
+        Console.Out.WriteLine("------------------------------------------------");
+        Console.Out.WriteLine(approx.First().Value);
 
         approx.First().Value.AllValues().AsParallel()
             .Select(s => dictionaries.Aggregate(s, (current, dictionary) => Find(dictionary, current)))
             .ForAll(s => {
                 if (s < min) {
                     min = s;
-                    Console.Error.WriteLine(min);
+                    Console.Out.WriteLine(min);
                 }
             });
 
-        Console.Error.WriteLine("------------------------------------------------");
+        Console.Out.WriteLine("------------------------------------------------");
 
         return min;
     }
