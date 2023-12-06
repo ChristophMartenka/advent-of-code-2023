@@ -4,59 +4,62 @@ internal static class Solution {
 
     internal static long Task1(StreamReader reader) {
         var dictionaries = Read(reader, out var seeds);
-        var min = long.MaxValue;
-
-        foreach (var s in seeds) {
-            var val = dictionaries.Aggregate(s, (current, dictionary) => Find(dictionary, current));
-
-            if (val < min) {
-                min = val;
-            }
-        }
-
-        return min;
+        return seeds.Select(s => dictionaries.Aggregate(s, (current, dictionary) => Find(dictionary, current))).Min();
     }
 
     internal static long Task2(StreamReader reader) {
+        # region Read seeds and dictionaries
         var dictionaries = Read(reader, out var seedsList);
         var seeds = new List<Range>();
         for (var i = 0; i < seedsList.Count; i += 2) {
             seeds.Add(new Range(seedsList[i], seedsList[i + 1]));
         }
 
+        // sort seeds so that the highest start value comes first
         seeds.Sort((a, b) => b.Start.CompareTo(a.Start));
 
-        var approx = new SortedDictionary<long, Range>();
-        var min = long.MaxValue;
-        foreach (var seed in seeds) {
-            Console.Out.WriteLine("approx " + seed);
+        # endregion
+        # region Approxmiate locations of seeds
 
-            seed.ApproxValues(500).AsParallel()
-                .Select(s => dictionaries.Aggregate(s, (current, dictionary) => Find(dictionary, current)))
-                .ForAll(s => {
-                    if (s < min) {
-                        min = s;
-                        Console.Out.WriteLine(min);
-                        approx.TryAdd(s, seed);
-                    }
-                });
+        // create approximation window from seed with highest start value
+        var approxWindow = (int)(seeds.First().Start * 0.00001);
+        if (approxWindow == 0) approxWindow = 100;
+
+        var approxSeedRange = seeds.First();
+        var approxSeed = approxSeedRange.Start;
+        var min = long.MaxValue;
+
+        foreach (var seedRange in seeds) {
+            Console.Out.WriteLine("Approximating seeds " + seedRange);
+
+            var locationsWithSeeds = seedRange.ApproxValues(approxWindow).AsParallel()
+                .Select(seed => (
+                    location: dictionaries.Aggregate(seed, (current, dictionary) => Find(dictionary, current)),
+                    currentSeed: seed
+                ))
+                .ToList();
+
+            foreach (var (location, currentSeed) in locationsWithSeeds) {
+                if (location >= min) continue;
+                Console.Out.WriteLine("New minimum found: " + min);
+
+                min = location;
+                approxSeedRange = seedRange;
+                approxSeed = currentSeed;
+            }
         }
 
-        Console.Out.WriteLine("------------------------------------------------");
-        Console.Out.WriteLine(approx.First().Value);
+        # endregion
 
-        approx.First().Value.AllValues().AsParallel()
+        Console.Out.WriteLine("------------------------------------------------");
+
+        var range = approxSeedRange.WithApproximationWindow(approxSeed, approxWindow);
+
+        Console.Out.WriteLine("Searching for seeds " + range);
+
+        return range.AllValues().AsParallel()
             .Select(s => dictionaries.Aggregate(s, (current, dictionary) => Find(dictionary, current)))
-            .ForAll(s => {
-                if (s < min) {
-                    min = s;
-                    Console.Out.WriteLine(min);
-                }
-            });
-
-        Console.Out.WriteLine("------------------------------------------------");
-
-        return min;
+            .Min();
     }
 
     private static Dictionary<Range, long>[] Read(StreamReader reader, out List<long> seeds) {
@@ -67,7 +70,7 @@ internal static class Solution {
             new Dictionary<Range, long>(), // light
             new Dictionary<Range, long>(), // temperature
             new Dictionary<Range, long>(), // humidity
-            new Dictionary<Range, long>()  // location
+            new Dictionary<Range, long>() // location
         };
 
         var seedsLine = reader.ReadLine() ?? throw new Exception();
@@ -104,7 +107,7 @@ internal static class Solution {
         return val;
     }
 
-    private record Range(long Start, long Size) : IComparable<Range> {
+    private record Range(long Start, long Size) {
         public IEnumerable<long> AllValues() {
             for (var i = Start; i <= Start + Size; i++) {
                 yield return i;
@@ -117,9 +120,14 @@ internal static class Solution {
             }
         }
 
-        public int CompareTo(Range? other) {
-            if (ReferenceEquals(this, other)) return 0;
-            return ReferenceEquals(null, other) ? 1 : Start.CompareTo(other.Start);
+        public Range WithApproximationWindow(long approximatedStart, int approximationWindow) {
+            var start = approximatedStart - approximationWindow < Start
+                ? Start
+                : approximatedStart - approximationWindow;
+            var size = approximationWindow > Size - (start - Start)
+                ? Size - (start - Start)
+                : approximationWindow;
+            return new Range(start, size);
         }
     }
 }
