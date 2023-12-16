@@ -11,7 +11,8 @@ internal static class Solution {
 
     internal static int Task1(StreamReader reader) {
         var map = ReadMap(reader);
-        return GetTotalEnergizedPoints(map, GetNextPointers(new Pointer(Direction.Right, new Point(-1, 0)), map).ToList());
+        var pointer = new Pointer(Direction.Right, new Point(-1, 0));
+        return GetTotalEnergizedPoints(map, pointer);
     }
 
     internal static int Task2(StreamReader reader) {
@@ -29,9 +30,8 @@ internal static class Solution {
             startingPointers.Add(new Pointer(Direction.Left, new Point(map[0].Length, y)));
         }
 
-        return startingPointers.Select(pointer => GetNextPointers(pointer, map))
-            .AsParallel()
-            .Select(pointers => GetTotalEnergizedPoints(map, pointers.ToList()))
+        return startingPointers.AsParallel()
+            .Select(pointer => GetTotalEnergizedPoints(map, pointer))
             .Max();
     }
 
@@ -45,38 +45,53 @@ internal static class Solution {
         return map;
     }
 
-    private static int GetTotalEnergizedPoints(IReadOnlyList<string> map, List<Pointer> pointers) {
+    private static int GetTotalEnergizedPoints(IReadOnlyList<string> map, Pointer pointer) {
         var energizedMap = map[0].Select(_ => new bool[map.Count]).ToArray();
 
-        var pointerCache = new HashSet<Pointer>(pointers);
+        var pointers = new List<Pointer> { pointer };
+        var pointerCache = new HashSet<Pointer>();
 
         while (pointers.Count > 0) {
-            pointers.ForEach(pointer => energizedMap[pointer.Pos.Y][pointer.Pos.X] = true);
-            pointers = GetAllNextPointers(pointers, pointerCache, map).ToList();
+            pointers = pointers.SelectMany(curPointer => GetNextPointersAndEnergize(curPointer, map, energizedMap))
+                // filter out pointers that are already in the cache and add the rest to the cache
+                .Where(nextPointer => pointerCache.Add(nextPointer))
+                .ToList();
         }
 
         return energizedMap.Select(line => line.Count(energized => energized)).Sum();
-        // calculate with just all unique points in pointer cache
-        // return pointerCache.Select(pointer => pointer.Pos).Distinct().Count();
     }
 
-    private static IEnumerable<Pointer> GetAllNextPointers(IEnumerable<Pointer> pointers, ISet<Pointer> pointerCache, IReadOnlyList<string> map) {
-        return from pointer in pointers
-            from nextPointers in GetNextPointers(pointer, map)
-            // filter out pointers that are already in the cache and add the rest to the cache
-            where pointerCache.Add(nextPointers)
-            select nextPointers;
-    }
-    
-    private static IEnumerable<Pointer> GetNextPointers(Pointer pointer, IReadOnlyList<string> map) {
+    private static IEnumerable<Pointer> GetNextPointersAndEnergize(
+        Pointer pointer,
+        IReadOnlyList<string> map,
+        IReadOnlyList<bool[]> energizedMap
+    ) {
         var nextPos = pointer.Pos.Offset(pointer.Direction);
-        if (nextPos.X < 0 || nextPos.X >= map[0].Length || nextPos.Y < 0 || nextPos.Y >= map.Count) {
+        if (!nextPos.IsWithinBounds(map[0].Length, map.Count)) {
             yield break;
         }
 
+        // energize the next position
+        energizedMap[nextPos.Y][nextPos.X] = true;
+
+        // move forward until we hit the next mirror
+        while (map[nextPos.Y][nextPos.X] == '.') {
+            var next = nextPos.Offset(pointer.Direction);
+            // check if we have reached the end of the map
+            if (!next.IsWithinBounds(map[0].Length, map.Count)) {
+                yield break;
+            }
+
+            nextPos = next;
+
+            // energize along the path until we hit the next mirror
+            energizedMap[nextPos.Y][nextPos.X] = true;
+        }
+
+        var direction = pointer.Direction;
         switch (map[nextPos.Y][nextPos.X]) {
             case '/':
-                yield return pointer.Direction switch {
+                yield return direction switch {
                     Direction.Right => new Pointer(Direction.Up, nextPos),
                     Direction.Left => new Pointer(Direction.Down, nextPos),
                     Direction.Up => new Pointer(Direction.Right, nextPos),
@@ -85,7 +100,7 @@ internal static class Solution {
                 };
                 break;
             case '\\':
-                yield return pointer.Direction switch {
+                yield return direction switch {
                     Direction.Right => new Pointer(Direction.Down, nextPos),
                     Direction.Left => new Pointer(Direction.Up, nextPos),
                     Direction.Up => new Pointer(Direction.Left, nextPos),
@@ -93,11 +108,11 @@ internal static class Solution {
                     _ => throw new Exception()
                 };
                 break;
-            case '|' when pointer.Direction != Direction.Up && pointer.Direction != Direction.Down:
+            case '|' when direction != Direction.Up && direction != Direction.Down:
                 yield return new Pointer(Direction.Up, nextPos);
                 yield return new Pointer(Direction.Down, nextPos);
                 break;
-            case '-' when pointer.Direction != Direction.Left && pointer.Direction != Direction.Right:
+            case '-' when direction != Direction.Left && direction != Direction.Right:
                 yield return new Pointer(Direction.Left, nextPos);
                 yield return new Pointer(Direction.Right, nextPos);
                 break;
@@ -118,6 +133,10 @@ internal static class Solution {
                 Direction.Right => this with { X = X + 1 },
                 _ => this
             };
+        }
+
+        public bool IsWithinBounds(int maxX, int maxY) {
+            return X >= 0 && X < maxX && Y >= 0 && Y < maxY;
         }
     }
 }
