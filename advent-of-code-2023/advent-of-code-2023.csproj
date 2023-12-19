@@ -33,6 +33,8 @@
         <EmbeddedResource Include="day17\testInput.txt" />
         <EmbeddedResource Include="day18\input.txt" />
         <EmbeddedResource Include="day18\testInput.txt" />
+        <EmbeddedResource Include="day19\input.txt" />
+        <EmbeddedResource Include="day19\testInput.txt" />
         <EmbeddedResource Include="day1\input.txt"/>
         <EmbeddedResource Include="day1\testInput.txt"/>
         <EmbeddedResource Include="day1\testInput-part2.txt" />
